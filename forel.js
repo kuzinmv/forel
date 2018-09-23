@@ -9,12 +9,24 @@ let distMatrix = new Array();
 let tauMatrix = new Array();
 let vectorFields ;
 
+/**
+ * Функция для рассчета метрики
+ * @param {number} i номер 1го элемента множества
+ * @param {number} j номер 2го элемента множества
+ * @returns {number}
+ */
 const metric = function(i,j){
     return lambda
         ? distMatrix[i][j]*tauMatrix[i][j]*tauMatrix[i][j]
         : distMatrix[i][j];
 };
 
+/**
+ * Функция рассчета Евклидова расстояния
+ * @param {array.<number>} a1
+ * @param {array.<number>} a2
+ * @returns {number}
+ */
 const euclidianDist = function(a1, a2){
     let res = 0;
     var len = vectorFields.length;
@@ -26,6 +38,13 @@ const euclidianDist = function(a1, a2){
     return Math.sqrt(res);
 };
 
+
+/**
+ * Функция для очистки признаков - кластеризован или нет объект в выборке и сброс номера кластера,
+ * сбрасывает глобальную переменную количества кластеризованных объектов
+ *
+ * @param dataSet {array.<vector>}
+ */
 const clearClusteredMarks = function(dataSet){
     var len = dataSet.length;
     while (len--) {
@@ -35,6 +54,11 @@ const clearClusteredMarks = function(dataSet){
     totalClusteredMarks = 0;
 };
 
+
+/**
+ * Подготовка и очистка входных данных, превращаем строчки во float, пустые значения устанавливаем в 0
+ * @param dataSet
+ */
 const prepareData = function(dataSet){
     var len = dataSet.length;
     while (len--) {
@@ -44,6 +68,10 @@ const prepareData = function(dataSet){
     }
 };
 
+/**
+ *  Функция рассчета матрицы расстояний м/у всеми точками выборки
+ * @param dataSet
+ */
 const calcDistMatrix = function(dataSet){
     var j = 0;
     var i = 0;
@@ -60,6 +88,13 @@ const calcDistMatrix = function(dataSet){
     }
 };
 
+/**
+ * Функция поиска длинны минимального смежного ребра к данному
+ * @param {number} N - размер выборки
+ * @param {number} a - первая точка ребра
+ * @param {number} b - вторая точка ребра
+ * @returns {number} - длинна самого короткого смежного ребра
+ */
 const calcMinBeta = function(N, a, b){
     let min = 1000000;
     var i = N;
@@ -74,12 +109,17 @@ const calcMinBeta = function(N, a, b){
     return min;
 };
 
+/**
+ *  Функция рассчета матрицы нормированной локальной плотности для каждой пары элементов выборки
+ * @param N
+ */
 const calcTauMatrix = function(N){
     var j = 0;
     let tau = 0;
     let max = 0;
+    var i = 0;
     while (j < N) {
-        var i = 0;
+        i = 0;
         const row = new Array(N);
         while (i < N) {
             if (i == j) {
@@ -87,7 +127,7 @@ const calcTauMatrix = function(N){
             } else {
                 tau = distMatrix[i][j]/calcMinBeta(N, i, j);
             }
-            if (tau > max) {max = tau};
+            if (tau > max) {max = tau}
             row[i] = tau;
             i++;
         }
@@ -97,7 +137,7 @@ const calcTauMatrix = function(N){
 
     j = 0;
     while (j < N) {
-        var i = 0;
+        i = 0;
         while (i < N) {
             tauMatrix[i][j] = tauMatrix[i][j]/max;
             i++;
@@ -107,6 +147,11 @@ const calcTauMatrix = function(N){
 
 };
 
+/**
+ * Функция рассчета диаметра для набора данных. Максимум по матрице расстояний
+ * @param N
+ * @returns {number}
+ */
 const diameter = function(N){
     var j = N;
     var i = N;
@@ -126,6 +171,11 @@ const diameter = function(N){
     return max;
 };
 
+/**
+ * Ищщем следующую не клстеризованную точку начиная с начала выборки
+ * @param dataSet
+ * @returns {number}
+ */
 const nextPoint1 = function(dataSet){
     var j = 0;
     while (j<dataSet.length ) {
@@ -136,6 +186,11 @@ const nextPoint1 = function(dataSet){
     }
 };
 
+/**
+ * Ищщем следующую не клстеризованную точку начиная с конца выборки
+ * @param dataSet
+ * @returns {*}
+ */
 const nextPoint2 = function(dataSet){
     var j = dataSet.length;
     while (j--) {
@@ -145,13 +200,31 @@ const nextPoint2 = function(dataSet){
     }
 };
 
+/**
+ * Функция выбора следующей некластеризованной точки
+ * @param dataSet
+ * @param firstIteration
+ * @param N
+ * @returns {number}
+ */
 const nextPoint = function(dataSet, firstIteration, N){
   if (firstIteration) {
+      // Перваую да и все последующие точки рекомендовано выбирать случайным образом,
+      // зафиксировал чтобы совпадали результаты, хотя они достаточно близкими были и при случайном выборе
       return 9;
   }
   return nextPoint1(dataSet);
+  // тут так же зафиксировал только с начала поиск, убрал случайный выбор направления 1 или  2 поиска некластеризованной точки
 };
 
+/**
+ * Функция возвращает массив индексов точек из выборки, которые поппадают внутрь сферы
+ * с цетнром в точке с индексом inx и радиусом rr
+ * @param dataSet Выборка
+ * @param inx     Индекс точки - центра
+ * @param rr      значение радиуса
+ * @returns {Array}
+ */
 const nearPoints = function(dataSet, inx, rr){
     var res = [];
     var i = dataSet.length;
@@ -163,16 +236,20 @@ const nearPoints = function(dataSet, inx, rr){
     return res;
 };
 
+/**
+ * Функция поиска центральной точки кластера, центральной считается та точка,
+ * сумма расстояний до которой от всех точек кластера будет минимальным
+ * @param pts  {array} - массив индексов точек выборки, которые считаются кластером,
+ *                       из которых и нужно найти центральную точку
+ * @returns {number} Индекс точки из выборки
+ */
 const centerPoint = function(pts) {
     var j = pts.length;
     let min = 1000000;
     let inx = -1;
+    let sum = 0;
     while (j--) {
-        let i = pts.length;
-        let sum = 0;
-        while (i--) {
-            sum += metric(pts[j],pts[i]);
-        }
+        sum = clusterWeight(pts[j],pts);
         if (sum < min){
             min = sum;
             inx = j;
@@ -181,7 +258,13 @@ const centerPoint = function(pts) {
     return pts[inx];
 };
 
-const clusterWeight = function(dataSet, centerPoint, cluster){
+/**
+ *  Функция расчета "веса" кластера = суммы всех расстояний от всех элементов до центра
+ * @param centerPoint
+ * @param cluster
+ * @returns {number}
+ */
+const clusterWeight = function(centerPoint, cluster){
     let res1 = 0;
     var len = cluster.length;
     while (len--) {
@@ -190,6 +273,14 @@ const clusterWeight = function(dataSet, centerPoint, cluster){
     return res1;
 };
 
+
+/**
+ * Помещаем указанные точки в нужный кластер, устанавливаем признак кластеризации и добавляем
+ * к глобальной переменной количество кластеризованных точек
+ * @param dataSet
+ * @param pts {array.<number>} масив индексов выборки
+ * @param cluster {number} номер кластера
+ */
 const markAsClustered = function(dataSet, pts, cluster){
     var j = pts.length;
     while (j--) {
@@ -199,14 +290,26 @@ const markAsClustered = function(dataSet, pts, cluster){
     totalClusteredMarks+=pts.length;
 };
 
+
+/**
+ * Отправляем в стдаут игрока ; номер кластера
+ * @param dataSet
+ */
 const printCluster = function(dataSet){
     var j = 0;
     while (j < dataSet.length ) {
-        console.log((dataSet[j].player+','+dataSet[j].cluster+','+dataSet[j].stat1+','+dataSet[j].stat97));
+        console.log(dataSet[j].player + ';' + dataSet[j].cluster);
         j++;
     }
 };
 
+/**
+ * Функция рассчета веса признака кластера. Наиболее плотно кучкующиеся (ско -> min) значения по каждому признаку.
+ * Минимальные значения ско для данного признака являются более весомыми при определении растояния до центра
+ * @param dataSet -  выборка
+ * @param pts {Array.<number>} - массив индексов элементов кластера из выборки  dataSet
+ * @returns {Array.<T>}
+ */
 const mostValuableProp = function(dataSet, pts){
     var j = pts.length;
     var len = vectorFields.length;
@@ -225,6 +328,8 @@ const mostValuableProp = function(dataSet, pts){
         sum[len] = sum[len]/pts.length;
     }
 
+    //Нашли вектор средних значений
+
     j = pts.length;
     while (j--) {
         len = vectorFields.length;
@@ -232,12 +337,17 @@ const mostValuableProp = function(dataSet, pts){
             res[len] += Math.pow(sum[len] - dataSet[pts[j]][vectorFields[len]],2);
         }
     }
+    //Нашли вектор сумм квадратов разностей
+
     len = vectorFields.length;
     let max = 0;
     while (len--) {
         res[len] = res[len]/pts.length;
         if (res[len] > max) {max = res[len]}
     }
+
+    // Ищщем норму
+
     len = vectorFields.length;
     while (len--) {
         if (res[len] > 0) {
@@ -249,9 +359,18 @@ const mostValuableProp = function(dataSet, pts){
     }
 
     return result.sort((a,b) => (a.value < b.value) ? 1 : ((b.value < a.value) ? -1 : 0)).slice(0,20) ;
+    // сортируем и выдаем 20 самых самых
 };
 
-
+/**
+ * Функция разбиения выборки на кластера FOREL
+ * @see http://sernam.ru/book_zg.php?id=16
+ *
+ * @param dataSet - Выборка
+ * @param radius {number} - Максимальный радиус класера
+ * @param printStats
+ * @returns {{cluster: number, weight: number}}
+ */
 const forel = function(dataSet, radius, printStats){
     const N = dataSet.length;
     let cluster = 0;
@@ -274,7 +393,7 @@ const forel = function(dataSet, radius, printStats){
             console.log('most valuable stats ', mostValuableProp(dataSet, nearPointsIndexArray));
         }
 
-        weight += clusterWeight(dataSet, centerPointInx, nearPointsIndexArray);
+        weight += clusterWeight(centerPointInx, nearPointsIndexArray);
     }
     return {cluster, weight};
 };
@@ -284,16 +403,15 @@ csv().fromFile(csvFilePath).then((dataSet) => {
 
     const N = dataSet.length;
     prepareData(dataSet);
-    //vectorFields = Object.keys(dataSet[0]).filter(value => value.substr(0, 4) == 'stat' && value !== 'stat54');
-    vectorFields = Object.keys(dataSet[0]).filter(value => value == 'stat1' || value == 'stat97');
+    vectorFields = Object.keys(dataSet[0]).filter(value => value.substr(0, 4) == 'stat' && value !== 'stat54');
 
     clearClusteredMarks(dataSet);
     calcDistMatrix(dataSet);
     calcTauMatrix(N);
 
     const D = diameter(N);
-    let totalWeight = lambda ? 13.1 : 0.05254811617086335;
-    let radiusRate = lambda ? 1000 : 10000;
+    let totalWeight = lambda ? 13.1 : 332; // максимальный значения "веса" всей выборки - 1кластер для нормирования
+    let radiusRate = lambda ? 1000 : 100; // Шаг для поиска оптимального радиуса
 
     if (csvFilePath == 'player_stats_3.csv') {
         totalWeight = lambda ? 1.9 : 21;
@@ -301,6 +419,10 @@ csv().fromFile(csvFilePath).then((dataSet) => {
     }
 
     if (radius < 0) {
+        // Если передали отрицательный радиус, значит работаем в режиме исследования те многократно запускаем
+        // изменяем с определенным шагом радиус и запускаем кластеризацию смотрим суммы весов получившихся кластеров
+        // и значение целевой ф-ции
+
         for (let i= 1; i<100; i++) {
             const rr = (i/radiusRate)*(D);
             const result = forel(dataSet, rr, false);
@@ -310,6 +432,9 @@ csv().fromFile(csvFilePath).then((dataSet) => {
             console.log(string.split('.').join(','));
         }
     } else {
+
+        // если радиус задали то считаем кластеризацию 1 раз, выводим статистику по признакам и само разбиение на экран
+
         console.log('--------------- stats ---------------------');
         const result = forel(dataSet, radius, true);
         console.log('--------------- result --------------------');
