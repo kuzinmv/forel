@@ -16,9 +16,9 @@ let vectorFields ;
  * @returns {number}
  */
 const metric = function(i,j){
-    return lambda
-        ? distMatrix[i][j]*tauMatrix[i][j]*tauMatrix[i][j]
-        : distMatrix[i][j];
+    const d = distMatrix[i][j];
+    const t = tauMatrix[i][j];
+    return lambda ? d*t*t : d;
 };
 
 /**
@@ -29,8 +29,8 @@ const metric = function(i,j){
  */
 const euclidianDist = function(a1, a2){
     let res = 0;
-    var len = vectorFields.length;
-    var delta = 0;
+    let len = vectorFields.length;
+    let delta = 0;
     while (len--) {
         delta = (a1[vectorFields[len]] - a2[vectorFields[len]]);
         res += delta * delta;
@@ -46,7 +46,7 @@ const euclidianDist = function(a1, a2){
  * @param dataSet {array.<vector>}
  */
 const clearClusteredMarks = function(dataSet){
-    var len = dataSet.length;
+    let len = dataSet.length;
     while (len--) {
         dataSet[len].clustered = false;
         dataSet[len].cluster = -1;
@@ -60,7 +60,7 @@ const clearClusteredMarks = function(dataSet){
  * @param dataSet
  */
 const prepareData = function(dataSet){
-    var len = dataSet.length;
+    let len = dataSet.length;
     while (len--) {
         for (let i = 1 ; i <= 127 ; i++) {
             dataSet[len]['stat' + i] = parseFloat('0' + dataSet[len]['stat' + i].replace(',','.'));
@@ -73,9 +73,9 @@ const prepareData = function(dataSet){
  * @param dataSet
  */
 const calcDistMatrix = function(dataSet){
-    var j = 0;
-    var i = 0;
-    var row;
+    let j = 0;
+    let i = 0;
+    let row;
     while (j < dataSet.length) {
         i = 0;
         row = new Array(dataSet.length);
@@ -97,7 +97,7 @@ const calcDistMatrix = function(dataSet){
  */
 const calcMinBeta = function(N, a, b){
     let min = 1000000;
-    var i = N;
+    let i = N;
     while (i--) {
         if (!(i == a || i == b)) {
             const d1 = distMatrix[a][i];
@@ -114,20 +114,18 @@ const calcMinBeta = function(N, a, b){
  * @param N
  */
 const calcTauMatrix = function(N){
-    var j = 0;
+    let j = 0;
     let tau = 0;
     let max = 0;
-    var i = 0;
+    let i = 0;
     while (j < N) {
         i = 0;
         const row = new Array(N);
         while (i < N) {
-            if (i == j) {
-                tau = 0;
-            } else {
-                tau = distMatrix[i][j]/calcMinBeta(N, i, j);
+            tau  = (i == j) ? 0 : distMatrix[i][j]/calcMinBeta(N, i, j);
+            if (tau > max) {
+                max = tau
             }
-            if (tau > max) {max = tau}
             row[i] = tau;
             i++;
         }
@@ -135,14 +133,12 @@ const calcTauMatrix = function(N){
         j++
     }
 
-    j = 0;
-    while (j < N) {
-        i = 0;
-        while (i < N) {
-            tauMatrix[i][j] = tauMatrix[i][j]/max;
-            i++;
+    j = N;
+    while (j--) {
+        i = N;
+        while (i--) {
+            tauMatrix[i][j] /= max;
         }
-        j++
     }
 
 };
@@ -153,8 +149,8 @@ const calcTauMatrix = function(N){
  * @returns {number}
  */
 const diameter = function(N){
-    var j = N;
-    var i = N;
+    let j = N;
+    let i = N;
     let max = 0;
     let d = 0;
     while (j--) {
@@ -177,7 +173,7 @@ const diameter = function(N){
  * @returns {number}
  */
 const nextPoint1 = function(dataSet){
-    var j = 0;
+    let j = 0;
     while (j<dataSet.length ) {
         if (!dataSet[j].clustered) {
             return j;
@@ -192,7 +188,7 @@ const nextPoint1 = function(dataSet){
  * @returns {*}
  */
 const nextPoint2 = function(dataSet){
-    var j = dataSet.length;
+    let j = dataSet.length;
     while (j--) {
         if (!dataSet[j].clustered) {
             return j;
@@ -226,8 +222,8 @@ const nextPoint = function(dataSet, firstIteration, N){
  * @returns {Array}
  */
 const nearPoints = function(dataSet, inx, rr){
-    var res = [];
-    var i = dataSet.length;
+    let res = [];
+    let i = dataSet.length;
     while (i--) {
         if (metric(inx,i) <= rr && !dataSet[i].clustered ) {
             res.push(i);
@@ -244,7 +240,7 @@ const nearPoints = function(dataSet, inx, rr){
  * @returns {number} Индекс точки из выборки
  */
 const centerPoint = function(pts) {
-    var j = pts.length;
+    let j = pts.length;
     let min = 1000000;
     let inx = -1;
     let sum = 0;
@@ -266,9 +262,9 @@ const centerPoint = function(pts) {
  */
 const clusterWeight = function(centerPoint, cluster){
     let res1 = 0;
-    var len = cluster.length;
+    let len = cluster.length;
     while (len--) {
-        res1 += metric(centerPoint,cluster[len]);
+        res1 += metric(centerPoint, cluster[len]);
     }
     return res1;
 };
@@ -282,7 +278,7 @@ const clusterWeight = function(centerPoint, cluster){
  * @param cluster {number} номер кластера
  */
 const markAsClustered = function(dataSet, pts, cluster){
-    var j = pts.length;
+    let j = pts.length;
     while (j--) {
         dataSet[pts[j]].clustered = true;
         dataSet[pts[j]].cluster = cluster;
@@ -296,7 +292,7 @@ const markAsClustered = function(dataSet, pts, cluster){
  * @param dataSet
  */
 const printCluster = function(dataSet){
-    var j = 0;
+    let j = 0;
     while (j < dataSet.length ) {
         console.log(dataSet[j].player + ';' + dataSet[j].cluster);
         j++;
@@ -311,11 +307,11 @@ const printCluster = function(dataSet){
  * @returns {Array.<T>}
  */
 const mostValuableProp = function(dataSet, pts){
-    var j = pts.length;
-    var len = vectorFields.length;
-    var res = new Array(len).fill(0);
-    var sum = new Array(len).fill(0);
-    var result = [];
+    let j = pts.length;
+    let len = vectorFields.length;
+    let res = new Array(len).fill(0);
+    let sum = new Array(len).fill(0);
+    let result = [];
 
     while (j--) {
         len = vectorFields.length;
@@ -345,20 +341,21 @@ const mostValuableProp = function(dataSet, pts){
         res[len] = res[len]/pts.length;
         if (res[len] > max) {max = res[len]}
     }
-
-    // Ищщем норму
+    // Нашли норму
 
     len = vectorFields.length;
     while (len--) {
         if (res[len] > 0) {
             result.push({
                 name: vectorFields[len],
-                value: Math.log10(1 / res[len]/max)
+                value: Math.log10(1 / res[len] / max)
             });
         }
     }
 
-    return result.sort((a,b) => (a.value < b.value) ? 1 : ((b.value < a.value) ? -1 : 0)).slice(0,20) ;
+    return result
+            .sort((a,b) => (a.value < b.value) ? 1 : ((b.value < a.value) ? -1 : 0))
+            .slice(0, 20) ;
     // сортируем и выдаем 20 самых самых
 };
 
@@ -410,7 +407,7 @@ csv().fromFile(csvFilePath).then((dataSet) => {
     calcTauMatrix(N);
 
     const D = diameter(N);
-    let totalWeight = lambda ? 13.1 : 332; // максимальный значения "веса" всей выборки - 1кластер для нормирования
+    let totalWeight = lambda ? 13.1 : 332; // максимальное значения "веса" всей выборки - 1(2) кластер(а) для нормирования
     let radiusRate = lambda ? 1000 : 100; // Шаг для поиска оптимального радиуса
 
     if (csvFilePath == 'player_stats_3.csv') {
